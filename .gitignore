@@ -1,22 +1,15 @@
+
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-*.so
 
 # Audio output files
-output.mp3
-output_music.mp3
 *.mp3
 
 # OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
 
 # IDE
 .vscode/
@@ -24,5 +17,3 @@ output_music.mp3
 
 # Credentials
 credentials.json
-*.json
-
