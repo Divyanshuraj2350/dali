@@ -1,4 +1,5 @@
-# Introducing Nova
+# Introducing Dali
+Dynamic AI listening Interface
 A fast, versatile voice assistance that can handle daily tasks seemlessly. 
 
 ## Highlights
@@ -9,8 +10,8 @@ A fast, versatile voice assistance that can handle daily tasks seemlessly.
 
 
 ## Getting Started
-- `$ git clone https://github.com/ananyab1909/Nova-voice-assistant.git` - clone this project to your computer.
-- `$ cd Nova-voice-assistant` - go inside the project directory.
+- https://github.com/Divyanshuraj2350/dali.git
+- `$ cd Dali-voice-assistant` - go inside the project directory.
 - Run `pip install -r ./requirement.txt` to setup dependencies and virtual environment.
 - `python ./main.py` to execute the python file.
 - To deactivate the virtual environment, run `deactivate`.
@@ -27,16 +28,9 @@ A fast, versatile voice assistance that can handle daily tasks seemlessly.
 - __WhatsApp Web__ must be logged in on default browser for _Nova_ to access it
 
 ## About Me
-Hello, my name is Ananya Biswas. I am an Engineering Student at [Kalinga Institute of Industrial Technology](https://kiit.ac.in/). I enjoy making teeny tiny projects in
-my leisure time and this is one of them. Now that my this project is over, I am open-sourcing the project. Hope you like it!
+Hello, my name is Divyanshu Raj. I am an Engineering Student at [Acharya Institute of Industrial Technology]. I enjoy making teeny tiny projects in
+my semend and this is one of them. Now that my this project is over, I am open-sourcing the project. Hope you like it!
 
-Lastly, I would like to put it out there that I have worked on other projects that you may like. You can check them out at my [Github](https://github.com/ananyab1909/). Give it a whirl and let me know your thoughts.
 
-If you would like to contribute to this project, you can do so by creating a [PR](https://help.github.com/articles/about-pull-requests/) ; and to support my work, you can click on the projects you like and reward a star.
-
-## Socials
-- __Ananya Biswas(Me)__ 
-    - Github : https://github.com/ananyab1909/
-    - Instagram: https://instagram.com/thegraffiti.mind
 
 
