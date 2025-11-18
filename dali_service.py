@@ -1,8 +1,7 @@
-
 #!/usr/bin/env python3
 """
 Dali Voice Assistant - Background Service
-Listens for "Hey,he,darling,Dali,assistant,okay dali,ok dali,start" wake word and activates the assistant
+Listens for wake words and activates the assistant.
 """
 
 import sys
@@ -16,11 +15,11 @@ class DaliService:
         self.r = sr.Recognizer()
         self.is_active = False
         self.running = True
-        
+
     def listen_for_wake_word(self):
-        """Continuously listen for 'Hey Dali' wake word"""
+        """Continuously listen for wake words"""
         print("🎤 Dali is listening in the background...")
-        print("💡 Say 'Hey,he,darling,Dali,assistant,okay dali,ok dali,start,computer' to activate")
+        print("💡 Say 'Hey,he,darling,Dali,assistant,okay dali,ok dali,start,computer' to activate")   
         
         wake_words = [
             "computer",
@@ -34,7 +33,7 @@ class DaliService:
             "dali",
             "listen",
         ]
-        
+
         with sr.Microphone() as source:
             self.r.adjust_for_ambient_noise(source, duration=1)
             

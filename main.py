@@ -272,7 +272,6 @@ def conversation_flow():
                         response = f"Today is {current_date}"
                         print("Dali:", response)
                         read_aloud(response)
-
                     # Weather
                     elif any(word in prompt_lower for word in ["weather", "forecast", "temperature", "sky"]):
                         # Try to extract city name from the prompt
@@ -310,49 +309,49 @@ def conversation_flow():
                                 print("Dali:", weather_info)
                                 read_aloud(weather_info)
 
-                      # WhatsApp
-                      elif "whatsapp" in prompt_lower or "message" in prompt_lower:
-                          wapp = "Please make sure WhatsApp Web is logged in on your browser."
-                          print("Dali:", wapp)
-                          read_aloud(wapp)
-                          time.sleep(2)
+                    # WhatsApp
+                    elif "whatsapp" in prompt_lower or "message" in prompt_lower:
+                        wapp = "Please make sure WhatsApp Web is logged in on your browser."
+                        print("Dali:", wapp)
+                        read_aloud(wapp)
+                        time.sleep(2)
     
-                          no = "Tell me the 10-digit phone number"
-                          print("Dali:", no)
-                          read_aloud(no)
-    
-                          try:
-                              audio = r.listen(source, timeout=5)
-                              number_text = r.recognize_google(audio)
-                              print(f"You said: {number_text}")
+                        no = "Tell me the 10-digit phone number"
+                        print("Dali:", no)
+                        read_aloud(no)
+
+                        try:
+                            audio = r.listen(source, timeout=5)
+                            number_text = r.recognize_google(audio)
+                            print(f"You said: {number_text}")
         
-                              # Extract only digits
-                              number = ''.join(filter(str.isdigit, number_text))
+                            # Extract only digits
+                            number = ''.join(filter(str.isdigit, number_text))
+      
+                            if len(number) < 10:
+                                error_msg = "I need a 10-digit phone number. Please try again."
+                                print("Dali:", error_msg)               
+                                read_aloud(error_msg)
+                                continue
         
-                              if len(number) < 10:
-                                  error_msg = "I need a 10-digit phone number. Please try again."
-                                  print("Dali:", error_msg)
-                                  read_aloud(error_msg)
-                                  continue
+                            # Take last 10 digits if more than 10
+                            number = number[-10:]
         
-                              # Take last 10 digits if more than 10
-                              number = number[-10:]
+                            msg_prompt = "What message should I send?"
+                            print("Dali:", msg_prompt)
+                            read_aloud(msg_prompt)
         
-                              msg_prompt = "What message should I send?"
-                              print("Dali:", msg_prompt)
-                              read_aloud(msg_prompt)
+                            audio = r.listen(source, timeout=5)
+                            message = r.recognize_google(audio)
+                            print(f"You said: {message}")
         
-                              audio = r.listen(source, timeout=5)
-                              message = r.recognize_google(audio)
-                              print(f"You said: {message}")
-        
-                              send_msg(message, number)
-                              sent = "I have sent your message"
-                              print("Dali:", sent)
-                              read_aloud(sent)
-                          except Exception as e:
-                              print(f"WhatsApp error: {e}")
-                              read_aloud("Sorry, I couldn't send the message")
+                            send_msg(message, number)
+                            sent = "I have sent your message"
+                            print("Dali:", sent)
+                            read_aloud(sent)
+                        except Exception as e:
+                            print(f"WhatsApp error: {e}")
+                            read_aloud("Sorry, I couldn't send the message")
                     
                     # Music
                     elif any(word in prompt_lower for word in ["music", "spotify", "song", "play"]):
