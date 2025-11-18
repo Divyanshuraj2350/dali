@@ -2,15 +2,13 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import time
 import os
-from google.cloud import texttospeech_v1
-import winsound 
+from gtts import gTTS
+import subprocess 
 import speech_recognition as sr
 
 r = sr.Recognizer()
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'path-to-your-api-key'
-
-client = texttospeech_v1.TextToSpeechClient()
+# Using gTTS for text-to-speech (free, no setup needed)
 
 client_id= 'your-client-id'
 client_secret= 'your-client-secret'
@@ -20,22 +18,14 @@ sp_oauth = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redire
 sp=spotipy.Spotify(auth_manager=sp_oauth)
 
 def read_aloud(input_text):
-    input_text = texttospeech_v1.SynthesisInput(text=input_text)
-    voice = texttospeech_v1.VoiceSelectionParams(
-        language_code="en-US",
-        name="en-US-Wavenet-D",
-    )
-    audio_config = texttospeech_v1.AudioConfig(
-        audio_encoding=texttospeech_v1.AudioEncoding.LINEAR16,
-        speaking_rate=1.4
-    )
-    response = client.synthesize_speech(
-        request={"input": input_text, "voice": voice, "audio_config": audio_config}
-    )
-    with open('output.mp3', 'wb') as f:
-        f.write(response.audio_content)
-    
-    winsound.PlaySound("./output.mp3",winsound.SND_FILENAME)
+    """Convert text to speech using gTTS and play it"""
+    try:
+        tts = gTTS(text=input_text, lang='en', slow=False)
+        tts.save('output_music.mp3')
+        subprocess.run(['afplay', 'output_music.mp3'])
+    except Exception as e:
+        print(f"TTS Error in music.py: {e}")
+
 
 def search_play():
     search="Tell me the name of the song you want to search for"

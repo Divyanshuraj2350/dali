@@ -2,25 +2,22 @@ import google.generativeai as genai
 import speech_recognition as sr
 import emoji as em
 import os
-from google.cloud import texttospeech_v1
+from gtts import gTTS
 import time
 from datetime import datetime 
 import requests
 import pywhatkit
 import pyautogui
 import time
-import winsound
+import subprocess
 import music as spo
 import sys
 
-BASE_URL = "https://api.openweathermap.org/data/2.5/weather?"
-API_KEY= 'your-openweatherapi-key'
+GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'path-to-your=api=key'
-
-client = texttospeech_v1.TextToSpeechClient()
-
-genai.configure(api_key='your-api-key')
+# Using gTTS for text-to-speech (free, no setup needed)
+genai.configure(api_key='AIzaSyA5dhs_HcjZXxYCUyzccIaQk3ekwg05wCU')
 
 model = genai.GenerativeModel('gemini-pro')
 os.system('cls' if os.name == 'nt' else 'clear')
@@ -30,25 +27,17 @@ r = sr.Recognizer()
 os.system('cls' if os.name == 'nt' else 'clear')
 
 def read_aloud(input_text):
-    input_text = texttospeech_v1.SynthesisInput(text=input_text)
-    voice = texttospeech_v1.VoiceSelectionParams(
-        language_code="en-US",
-        name="en-US-Wavenet-D",
-    )
-    audio_config = texttospeech_v1.AudioConfig(
-        audio_encoding=texttospeech_v1.AudioEncoding.LINEAR16,
-        speaking_rate=1.4
-    )
-    response = client.synthesize_speech(
-        request={"input": input_text, "voice": voice, "audio_config": audio_config}
-    )
-    with open('output.mp3', 'wb') as f:
-        f.write(response.audio_content)
-    
-    winsound.PlaySound("./output.mp3",winsound.SND_FILENAME)
+    """Convert text to speech using gTTS and play it"""
+    try:
+        tts = gTTS(text=input_text, lang='en', slow=False)
+        tts.save('output.mp3')
+        subprocess.run(['afplay', 'output.mp3'])
+    except Exception as e:
+        print(f"TTS Error: {e}")
+
     
 def introduction():
-    text = 'Hello, I am Nova. Your personal voice assistant.'
+    text = 'Hello, I am Dali. Your personal voice assistant.'
     current_time = datetime.now().time()
     if current_time.hour < 12:
         print("Good morning, happy soul." )
@@ -74,33 +63,110 @@ def introduction():
 
 def generate(prompt):
     response = model.generate_content(["You will generate answers within 75 tokens. Write in a continuous flow, avoiding bulleted lists." + prompt])
-    print("Nova:", response.text)
+    print("Dali:", response.text)
     read_aloud(response.text)
 
-def weather(city):
-    text="Here are your results"
-    print("Nova :" + str(text))
-    read_aloud(text)
-    url = BASE_URL + "appid=" + API_KEY + "&q=" + city
-    response = requests.get(url).json()
-    temp_kelvin=response['main']['temp']
-    temp=temp_kelvin - 273.15
-    print("Temparature: {:.2f}".format(temp))
-    temptext="The temparature is {:.2f}".format(temp) + "Celsius"
-    read_aloud(temptext)
-    feels_like_kelvin = response['main']['feels_like']
-    feels_like=feels_like_kelvin-273.15
-    print("Feels like : {:.2f}".format(feels_like))
-    feeltext="It feels like it is {:.2f}".format(feels_like) + "Celsius"
-    read_aloud(feeltext)
-    humidity = response['main']['humidity']
-    print("Humidity: ",humidity,"%")
-    humidtext="The humidity is" + str(humidity) + "%"
-    read_aloud(humidtext)
-    wind_speed = response['wind']['speed']
-    print("wind speed: ",wind_speed,"m/s")
-    windtext="The wind speed is" + str(wind_speed) + "meters per second"
-    read_aloud(windtext)
+def get_coordinates(city_name):
+    """Get latitude and longitude for a city"""
+    try:
+        params = {
+            'name': city_name,
+            'count': 1,
+            'language': 'en',
+            'format': 'json'
+        }
+        response = requests.get(GEOCODING_URL, params=params)
+        data = response.json()
+        
+        if 'results' in data and len(data['results']) > 0:
+            result = data['results'][0]
+            return result['latitude'], result['longitude'], result['name'], result.get('country', '')
+        else:
+            return None, None, None, None
+    except Exception as e:
+        print(f"Geocoding error: {e}")
+        return None, None, None, None
+
+def get_weather(city_name):
+    """Get current weather for a city using Open-Meteo API"""
+    try:
+        # Get coordinates first
+        lat, lon, full_city_name, country = get_coordinates(city_name)
+        
+        if lat is None:
+            return f"Sorry, I couldn't find the city '{city_name}'"
+        
+        # Get weather data
+        params = {
+            'latitude': lat,
+            'longitude': lon,
+            'current_weather': 'true',
+            'temperature_unit': 'celsius'
+        }
+        
+        response = requests.get(WEATHER_URL, params=params)
+        data = response.json()
+        
+        if 'current_weather' in data:
+            current = data['current_weather']
+            temp = current['temperature']
+            windspeed = current['windspeed']
+            
+            # Weather code interpretation
+            weather_code = current['weathercode']
+            weather_desc = get_weather_description(weather_code)
+            
+            return f"Weather in {full_city_name}, {country}: {weather_desc}. Temperature is {temp}°C with wind speed {windspeed} km/h"
+        else:
+            return "Could not fetch weather data"
+            
+    except Exception as e:
+        return f"Weather error: {e}"
+
+def get_weather_description(code):
+    """Convert weather code to description"""
+    weather_codes = {
+        0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+        45: "Foggy", 48: "Foggy", 51: "Light drizzle", 53: "Moderate drizzle",
+        55: "Dense drizzle", 61: "Slight rain", 63: "Moderate rain",
+        65: "Heavy rain", 71: "Slight snow", 73: "Moderate snow",
+        75: "Heavy snow", 80: "Rain showers", 81: "Moderate rain showers",
+        82: "Violent rain showers", 95: "Thunderstorm", 96: "Thunderstorm with hail",
+        99: "Thunderstorm with heavy hail"
+    }
+    return weather_codes.get(code, "Unknown weather")
+
+
+def get_weather_description(code):
+    """Convert weather code to description"""
+    weather_codes = {
+        0: "Clear sky",
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+        45: "Foggy",
+        48: "Depositing rime fog",
+        51: "Light drizzle",
+        53: "Moderate drizzle",
+        55: "Dense drizzle",
+        61: "Slight rain",
+        63: "Moderate rain",
+        65: "Heavy rain",
+        71: "Slight snow",
+        73: "Moderate snow",
+        75: "Heavy snow",
+        77: "Snow grains",
+        80: "Slight rain showers",
+        81: "Moderate rain showers",
+        82: "Violent rain showers",
+        85: "Slight snow showers",
+        86: "Heavy snow showers",
+        95: "Thunderstorm",
+        96: "Thunderstorm with slight hail",
+        99: "Thunderstorm with heavy hail"
+    }
+    return weather_codes.get(code, "Unknown weather")
+
     
 def send_msg(msg,person):
     c=datetime.now()
@@ -134,151 +200,143 @@ def sending(msg,person,hour,m):
         read_aloud(error)
         
 def conversation_flow():
-    with sr.Microphone() as source:
-            intro="Nova is waiting for you."
+    try:
+        introduction()  # Greet user first
+        
+        with sr.Microphone() as source:
+            intro = "Dali is ready. You can speak now."
             print(intro)
             read_aloud(intro)
-            while True:
-                audio = r.listen(source)
-                start = r.recognize_google(audio)
-                if "nova" in start.lower():
-                    introduction()
-                    while True:
-                        text=("Speak to me, dearest. ")
-                        print("Nova: "+str(text))
-                        read_aloud(text)
-                        audio = r.listen(source)
-                        try:
-                            print("You said: " + r.recognize_google(audio))
-                            prompt = r.recognize_google(audio)
-                        except sr.UnknownValueError:
-                            error=("Google Speech Recognition could not understand audio")
-                            time.sleep(1)
-                            print(error)
-                            read_aloud(error)
-                            pass
-                        except sr.RequestError as e:
-                            error1=("Could not request results from Google Speech Recognition service; {0}".format(e))
-                            time.sleep(1)
-                            print(error1)
-                            read_aloud(error1)
-                            pass
-                        print("You:", prompt)
-                        if "quit" in prompt or "bye" in prompt or "shut up" in prompt or "go away" in prompt or "exit" in prompt or "farewell" in prompt:
-                            print("Nova: "+"".join({em.emojize(':frowning_face:')}))
-                            sys.exit()
             
-                        if "capabilities" in prompt.lower() or "capability" in prompt.lower() or "abilities" in prompt.lower() or "you do" in prompt.lower():
-                            text="I can generate prompts and show you weather forecast of any city. I can also send a whatsapp message too as well as play music for you."
-                            print("Nova:",text)
-                            read_aloud(text)
+            while True:
+                try:
+                    print("\nListening...")
+                    audio = r.listen(source, timeout=10, phrase_time_limit=10)
+                    
+                    try:
+                        prompt = r.recognize_google(audio)
+                        print(f"You said: {prompt}")
+                    except sr.UnknownValueError:
+                        print("Sorry, I couldn't understand that.")
+                        continue
+                    except sr.RequestError as e:
+                        print(f"Speech recognition error: {e}")
+                        continue
+                    
+                    prompt_lower = prompt.lower()
+                    
+                    # Exit commands
+                    if any(word in prompt_lower for word in ["quit", "bye", "shut up", "go away", "exit"]):
+                        farewell = "Goodbye! Have a great day!"
+                        print("Dali:", farewell)
+                        read_aloud(farewell)
+                        sys.exit()
+                    
+                    # Capabilities
+                    elif any(word in prompt_lower for word in ["capabilities", "capability", "able", "can you do"]):
+                        text = "I can answer questions, show weather forecast, send WhatsApp messages, and play Spotify music."
+                        print("Dali:", text)
+                        read_aloud(text)
+                    
+                    # Greetings
+                    elif any(word in prompt_lower for word in ["hello", "hey", "hi", "whats up"]):
+                        hello = "Hey there! I am Dali. I hope you have a nice day."
+                        print("Dali:", hello)
+                        read_aloud(hello)
+                    
+                    # Time
+                    elif "time" in prompt_lower:
+                        current_time = datetime.now().strftime("%I:%M %p")
+                        response = f"The time is {current_time}"
+                        print("Dali:", response)
+                        read_aloud(response)
+                    
+                    # Date
+                    elif "date" in prompt_lower or "today" in prompt_lower:
+                        current_date = datetime.now().strftime("%B %d, %Y")
+                        response = f"Today is {current_date}"
+                        print("Dali:", response)
+                        read_aloud(response)
+                    
+                    # Weather
+                    elif any(word in prompt_lower for word in ["weather", "forecast", "temperature", "sky"]):
+                        citytext = "Which city would you like to know about?"
+                        print("Dali:", citytext)
+                        read_aloud(citytext)
+                        
+                        try:
+                            audio = r.listen(source, timeout=5)
+                            city_name = r.recognize_google(audio)
+                            print(f"You said: {city_name}")
+                            weather(city_name)
+                        except:
+                            # Default to Kolkata if no response
+                            weather("Kolkata")
+                    
+                    # WhatsApp
+                    elif "whatsapp" in prompt_lower or "message" in prompt_lower:
+                        wapp = "Please make sure WhatsApp Web is logged in on your browser."
+                        print("Dali:", wapp)
+                        read_aloud(wapp)
+                        time.sleep(2)
+                        
+                        no = "Tell me the phone number"
+                        print("Dali:", no)
+                        read_aloud(no)
+                        
+                        try:
+                            audio = r.listen(source, timeout=5)
+                            number = r.recognize_google(audio)
+                            print(f"You said: {number}")
                             
-                        elif "hello" in prompt.lower() or "hey" in prompt.lower() or "whats up" in prompt.lower() or "hi" in prompt.lower():
-                            hello="Hey there good soul. I am Nova. I hope you have a nice day."
-                            print("Nova:" + str(hello))
-                            read_aloud(hello)
-                        
-                        elif "who" in prompt.lower():
-                            response = model.generate_content(["You will generate answers within 75 tokens. Write in a continuous flow, avoiding bulleted lists." + prompt])
-                            original=str(response.text)
-                            new = original.replace("Gemini", "Nova").replace("developed","powered").replace("Google","Gemini")
-                            print("Nova: "+ str(new))
-                            read_aloud(new)
-                        
-                        elif "music" in prompt.lower() or "spotify" in prompt.lower() or "song" in prompt.lower() or "songs" in prompt.lower():
-                            song="Connect and open spotify in your system"
-                            print("Nova: "+str(song))
-                            read_aloud(song)
-                            time.sleep(3)
-                            do="I will now search a song for you"
-                            print("Nova: "+str(do))
-                            read_aloud(do)
+                            msg_prompt = "What message should I send?"
+                            print("Dali:", msg_prompt)
+                            read_aloud(msg_prompt)
+                            
+                            audio = r.listen(source, timeout=5)
+                            message = r.recognize_google(audio)
+                            print(f"You said: {message}")
+                            
+                            send_msg(message, number)
+                            sent = "I have sent your message"
+                            print("Dali:", sent)
+                            read_aloud(sent)
+                        except Exception as e:
+                            print(f"WhatsApp error: {e}")
+                            read_aloud("Sorry, I couldn't send the message")
+                    
+                    # Music
+                    elif any(word in prompt_lower for word in ["music", "spotify", "song", "play"]):
+                        song = "Opening Spotify. Make sure it's running on your system."
+                        print("Dali:", song)
+                        read_aloud(song)
+                        try:
                             spo.search_play()
-                            time.sleep(3)
-                            inner_loop= True
-                            while inner_loop:
-                                options="I can play as well as pause the song. Tell disconnect to exit"
-                                print("Nova: "+str(options))
-                                read_aloud(options)
-                                with sr.Microphone() as source4:
-                                    audio = r.listen(source4)
-                                    print("You said: " + r.recognize_google(audio))
-                                    choose = r.recognize_google(audio)
-                                    if "pause" in choose.lower() or "stop" in choose.lower():
-                                        spo.pause()
-                                    elif "play" in choose.lower() or "resume" in choose.lower() or "start" in choose.lower():
-                                        spo.resume()
-                                    elif "disconnect" in choose.lower() or "quit" in choose.lower() or "shut" in choose.lower():
-                                        stop="You want the song to keep playing or stop playing"
-                                        print("Nova: " + str(stop))
-                                        read_aloud(stop)
-                                        with sr.Microphone() as source4:
-                                            audio = r.listen(source4)
-                                            print("You said: " + r.recognize_google(audio))
-                                            user = r.recognize_google(audio)
-                                            if "stop" in user.lower():
-                                                spo.pause()
-                                                inner_loop=False
-                                            else:
-                                                inner_loop=False 
-
-                        elif "weather" in prompt.lower() or "forecast" in prompt.lower() or "sky" in prompt.lower():
-                            citytext="Do you want your city or some other, dearest. "
-                            print("Nova: " + str(citytext))
-                            read_aloud(citytext)
-                            time.sleep(1)
-                            with sr.Microphone() as source1:
-                                audio = r.listen(source1)
-                                print("You said: " + r.recognize_google(audio))
-                                ans = r.recognize_google(audio)
-                                if "yes" in ans.lower() or "my" in ans.lower() or "first" in ans.lower() :
-                                    weather("Kolkata")
-                                else:
-                                    ask="Tell me your city, dearest."
-                                    print("Nova:"+str(ask))
-                                    read_aloud(ask)
-                                    audio = r.listen(source1)
-                                    print("You said: " + r.recognize_google(audio))
-                                    weather_prompt = r.recognize_google(audio)
-                                    weather(weather_prompt)
-                                    
-                        elif "whatsapp" in prompt.lower() or "message" in prompt.lower():
-                            wapp="Dear, please login into your web whatsapp beforehand"
-                            print("Nova:"+str(wapp))
-                            read_aloud(wapp)
-                            time.sleep(5)
-                            no="Tell the number you want to message"
-                            print("Nova:"+str(no))
-                            read_aloud(no)
-                            time.sleep(0.5)
-                            with sr.Microphone() as source2:
-                                audio = r.listen(source2)
-                                print("You said: " + r.recognize_google(audio))
-                                number = r.recognize_google(audio)
-                                confirm="Are you sure"
-                                print("Nova:"+str(confirm))
-                                read_aloud(confirm)
-                                audio = r.listen(source2)
-                                print("You said: " + r.recognize_google(audio))
-                                conf = r.recognize_google(audio)
-                                if "yes" in conf.lower() or "ya" in conf.lower() or "yeah" in conf.lower():
-                                    msg="Enter your message"
-                                    read_aloud(msg)
-                                    print("Nova:"+str(msg))
-                                    audio = r.listen(source2)
-                                    print("You said: " + r.recognize_google(audio))
-                                    message = r.recognize_google(audio)
-                                    send_msg(message,number)
-                                    sent="I have sent your message"
-                                    print("Nova:"+str(sent))
-                                    read_aloud(sent)
-                                else:
-                                    pass
-                                                                                                        
-                        else:
-                            generate(prompt)
-                else:
-                    pass
-        
-
-conversation_flow()
+                        except Exception as e:
+                            print(f"Music error: {e}")
+                            read_aloud("Sorry, Spotify is not available right now")
+                    
+                    # Joke
+                    elif "joke" in prompt_lower:
+                        generate("Tell me a funny joke")
+                    
+                    # Who are you
+                    elif "who" in prompt_lower:
+                        response = model.generate_content(["You will generate answers within 75 tokens. " + prompt])
+                        original = str(response.text)
+                        new = original.replace("Gemini", "Dali").replace("developed", "powered").replace("Google", "Ananya")
+                        print("Dali:", new)
+                        read_aloud(new)
+                    
+                    # General AI conversation
+                    else:
+                        generate(prompt)
+                
+                except Exception as e:
+                    print(f"Error: {e}")
+                    continue
+    
+    except KeyboardInterrupt:
+        print("\n\nGoodbye! Dali is shutting down.")
+        sys.exit(0)
+                        
